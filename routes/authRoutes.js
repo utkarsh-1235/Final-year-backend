@@ -3,7 +3,7 @@ const router = express.Router();
 const authController = require("./../controllers/authController");
 
 router.route("/login/teacher").post(authController.teacherLogin);
-router.route("/login/student").post(authController.studentLogin);
+//router.route("/login/student").post(authController.studentLogin);
 
 //? Incase of JWT
 //   .route("/logout")

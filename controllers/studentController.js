@@ -59,9 +59,10 @@ const createNewStudent = asyncHandler(async (req, res) => {
 
   // Create and Store New student
   const student = await Student.create(studentObj);
+  console.log(student);
 
   if (student) {
-    res.status(201).json({ message: `New Student ${name} created` });
+    res.status(201).json({ message: `New Student ${name} created`, student });
   } else {
     res.status(400).json({ message: "Invalid data received" });
   }
