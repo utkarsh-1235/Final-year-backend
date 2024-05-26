@@ -5,35 +5,35 @@ const daySchema = new mongoose.Schema({
   monday: [
     {
       type: String,
-      required: true,
+//      required: true,
       default: [],
     },
   ],
   tuesday: [
     {
       type: String,
-      required: true,
+  //    required: true,
       default: [],
     },
   ],
   wednesday: [
     {
       type: String,
-      required: true,
+    //  required: true,
       default: [],
     },
   ],
   thursday: [
     {
       type: String,
-      required: true,
+      //required: true,
       default: [],
     },
   ],
   friday: [
     {
       type: String,
-      required: true,
+      //required: true,
       default: [],
     },
   ],

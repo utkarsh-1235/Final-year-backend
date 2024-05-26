@@ -6,18 +6,20 @@ const asyncHandler = require("express-async-handler");
 // @route GET /attendance
 // @access Everyone
 const getAttendance = async (req, res) => {
-  if (!req?.params?.paper || !req?.params?.date || !req?.params?.hour) {
+  console.log(req.params.subject, req.params.date, req.params.hour)
+  if (!req?.params?.subject || !req?.params?.date || !req?.params?.hour) {
     return res
       .status(400)
       .json({ message: "Incomplete Request: Params Missing" });
   }
   const attendance = await Attendance.findOne({
-    paper: req.params.paper,
+    subject: req.params.subject,
     date: req.params.date,
     hour: req.params.hour,
   })
-    .populate({ path: "attendance.student", select: "name" })
+    .populate({ path: "attandance.student", select: "name" })
     .exec();
+    console.log(attendance);
   if (!attendance) {
     return res.status(404).json({
       message: `No Existing Record(s) found. Add New Record.`,
@@ -39,14 +41,14 @@ const getAttendanceStudent = asyncHandler(async (req, res) => {
     { $match: { date: req.params.date } },
     {
       $lookup: {
-        from: "paper",
-        localField: "paper",
+        from: "subject",
+        localField: "subject",
         foreignField: "_id",
-        as: "paper",
+        as: "subject",
       },
     },
     {
-      $unwind: "$paper",
+      $unwind: "$subject",
     },
     {
       $project: {
@@ -62,7 +64,7 @@ const getAttendanceStudent = asyncHandler(async (req, res) => {
             },
           },
         },
-        "paper.paper": 1,
+        "subject.subject": 1,
         hour: 1,
       },
     },
@@ -85,6 +87,7 @@ const getAttendanceStudent = asyncHandler(async (req, res) => {
       message: "No Records found.",
     });
   }
+  console.log(attendance)
   res.json(attendance);
 });
 
@@ -92,10 +95,15 @@ const getAttendanceStudent = asyncHandler(async (req, res) => {
 // @route POST /attendance
 // @access Private
 const addAttendance = asyncHandler(async (req, res) => {
-  const { paper, date, hour, attendance } = req.body;
+  const subject = req.params.subject;
+  const date = req.params.date;
+  const hour = req.params.hour;
 
+  const attandance = req.body.attandance;
+  console.log(subject, date, hour, attandance);
+  console.log(req.body)
   // Confirm Data
-  if (!paper || !date || !hour || !attendance) {
+  if (!subject || !date || !hour || !attandance) {
     return res
       .status(400)
       .json({ message: "Incomplete Request: Body Missing" });
@@ -103,9 +111,9 @@ const addAttendance = asyncHandler(async (req, res) => {
 
   // Check for Duplicates
   const duplicate = await Attendance.findOne({
-    paper: req.params.paper,
-    date: req.params.date,
-    hour: req.params.hour,
+    subject: subject,
+    date: date,
+    hour: hour,
   })
     .lean()
     .exec();
@@ -117,15 +125,15 @@ const addAttendance = asyncHandler(async (req, res) => {
   }
 
   const attendanceObj = {
-    paper,
+    subject: subject,
     date,
     hour,
-    attendance,
+    attandance,
   };
 
   // Create and Store New teacher
   const record = await Attendance.create(attendanceObj);
-
+  console.log(record);
   if (record) {
     res.status(201).json({
       message: `Attendance Record Added`,
@@ -139,10 +147,10 @@ const addAttendance = asyncHandler(async (req, res) => {
 // @route PATCH /attendance
 // @access Private
 const updateAttendance = asyncHandler(async (req, res) => {
-  const { id, paper, date, hour, attendance } = req.body;
-
+  const { id, subject, date, hour, attendance } = req.body;
+  console.log(id, subject, date, hour, attendance);
   // Confirm Data
-  if (!id || !paper || !date || !hour || !attendance) {
+  if (!id || !subject || !date || !hour || !attendance) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -167,10 +175,10 @@ const updateAttendance = asyncHandler(async (req, res) => {
   //     return res.status(409).json({ message: "Duplicate Username" });
   //   }
 
-  record.paper = paper;
+  record.subject = subject;
   record.date = date;
   record.hour = hour;
-  record.attendance = attendance;
+  record.attandance = attendance;
 
   const save = await record.save();
   if (save) {

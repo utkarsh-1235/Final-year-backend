@@ -76,17 +76,17 @@ const getInternalStudent = asyncHandler(async (req, res) => {
 // @route POST /Internal
 // @access Private
 const addInternal = asyncHandler(async (req, res) => {
-  const { paper, marks } = req.body;
+  const { subject, marks } = req.body;
 
   // Confirm Data
-  if (!paper || !marks) {
+  if (!subject || !marks) {
     return res
       .status(400)
       .json({ message: "Incomplete Request: Fields Missing" });
   }
   // Check for Duplicates
   const duplicate = await Internal.findOne({
-    paper: req.params.paper,
+    subject,
   })
     .lean()
     .exec();
@@ -95,7 +95,7 @@ const addInternal = asyncHandler(async (req, res) => {
   }
 
   const InternalObj = {
-    paper,
+    subject,
     marks,
   };
   // Create and Store New teacher

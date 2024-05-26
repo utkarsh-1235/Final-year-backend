@@ -1,6 +1,52 @@
 const { mongoose } = require("mongoose");
-const Paper = require("./../models/Paper");
+const Paper = require("../models/Paper");
 const asyncHandler = require("express-async-handler");
+const Subject = require("../models/Subject");
+const Student = require("../models/Student");
+
+
+const assignSubject = asyncHandler(async (req, res) => {
+  const { studentIds, subjectId } = req.body;
+
+    // Find the subject
+    const subject = await Subject.findById(subjectId);
+    if (!subject) {
+      return res.status(404).json({ error: 'Subject not found' });
+    }
+
+    // Update each student
+    await Promise.all(studentIds.map(async (studentId) => {
+      const student = await Student.findById(studentId);
+      if (!student) {
+        return res.status(404).json({ error: `Student with id ${studentId} not found` });
+      }
+
+      // Add subject to student's subjects list if not already present
+      if (!student.subjects.includes(subjectId)) {
+        student.subjects.push(subjectId);
+      }
+    }));
+
+    // Save all modified students
+    await Promise.all(studentIds.map(async (studentId) => {
+      const student = await Student.findById(studentId);
+      await student.save();
+    }));
+
+    // Add students to subject's students list if not already present
+    studentIds.forEach(studentId => {
+      if (!subject.students.includes(studentId)) {
+        subject.students.push(studentId);
+      }
+    });
+
+    // Save the modified subject
+    await subject.save();
+
+    return res.status(200).json({ message: 'Subjects assigned successfully' });
+  
+});
+
 
 // @desc Get Papers for each Teacher
 // @route GET /Paper/teacher/teacherId
@@ -9,11 +55,13 @@ const getPapers = asyncHandler(async (req, res) => {
   if (!req?.params?.teacherId) {
     return res.status(400).json({ message: "Teacher ID Missing" });
   }
-  const papers = await Paper.find({
+  const papers = await Subject.find({
     teacher: req.params.teacherId,
   })
     .select("-students")
     .exec();
+
+    console.log(papers)
   if (!papers) {
     return res.status(404).json({
       message: `No Paper(s) found`,
@@ -29,7 +77,7 @@ const getPapersStudent = asyncHandler(async (req, res) => {
   if (!req?.params?.studentId) {
     return res.status(400).json({ message: "Student ID Missing" });
   }
-  const papers = await Paper.aggregate([
+  const papers = await Subject.aggregate([
     {
       $lookup: {
         from: "teachers",
@@ -72,7 +120,7 @@ const getAllPapers = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Student ID Missing" });
   }
 
-  const papers = await Paper.aggregate([
+  const papers = await Subject.aggregate([
     {
       $lookup: {
         from: "teachers",
@@ -86,6 +134,7 @@ const getAllPapers = asyncHandler(async (req, res) => {
     },
     {
       $project: {
+        subject:1,
         semester: 1,
         year: 1,
         paper: 1,
@@ -98,6 +147,7 @@ const getAllPapers = asyncHandler(async (req, res) => {
       },
     },
   ]);
+  console.log(papers);
   if (!papers) {
     return res.status(404).json({
       message: `No Paper(s) found`,
@@ -110,16 +160,19 @@ const getAllPapers = asyncHandler(async (req, res) => {
 // @route GET /paper/students/:paperId
 // @access Private
 const getStudentsList = asyncHandler(async (req, res) => {
+  console.log(req.params.paperId)
   if (!req?.params?.paperId) {
     return res
       .status(400)
       .json({ message: "Incomplete Request: Params Missing" });
   }
 
-  const students = await Paper.findById(req.params.paperId)
+  const students = await Subject.findById(req.params.paperId)
     .select("students")
-    .populate({ path: "students", select: "name" })
+    .populate({ path: "students",select: "name universityRollno" })
     .exec();
+
+    console.log(students);
   if (!students?.students) {
     return res.status(400).json({ message: "No Students Found" });
   }
@@ -129,45 +182,43 @@ const getStudentsList = asyncHandler(async (req, res) => {
 // @desc Get Paper
 // @route GET /Paper
 // @access Everyone
-const getPaper = asyncHandler(async (req, res) => {
-  if (!req?.params?.paperId) {
+const getSubject = asyncHandler(async (req, res) => {
+  if (!req?.params?.subjectId) {
     return res
       .status(400)
       .json({ message: "Incomplete Request: Params Missing" });
   }
-  const paper = await Paper.findOne({
-    _id: req.params.paperId,
+  const subject = await Subject.findOne({
+    _id: req.params.SubjectId,
   })
     .populate({ path: "teacher", select: "name" })
     .populate({ path: "students", select: "name" })
     .exec();
-  if (!paper) {
+  if (!subject) {
     return res.status(404).json({
       message: `No Paper(s) found`,
     });
   }
-  res.json(paper);
+  res.json(subject);
 });
 
 // @desc Add Paper
 // @route POST /Paper
 // @access Private
 const addPaper = asyncHandler(async (req, res) => {
-  const { department, semester, year, paper, students, teacher } = req.body;
+  const { department, subject, universityCode, nbaCode, year, students, semester, teacher } = req.body;
 
   // Confirm Data
-  if (!department || !paper || !semester || !year || !students || !teacher) {
+  // if (!department || !paper || !semester || !year || !students || !teacher) {
+    if (!department || !subject || !universityCode ||!nbaCode || !semester || !year || !teacher){
     return res
       .status(400)
       .json({ message: "Incomplete Request: Fields Missing" });
   }
 
   // Check for Duplicates
-  const duplicate = await Paper.findOne({
-    department: req.body.department,
-    paper: req.body.paper,
-    students: req.body.students,
-    teacher: req.body.teacher,
+  const duplicate = await Subject.findOne({
+    universityCode
   })
     .lean()
     .exec();
@@ -176,21 +227,23 @@ const addPaper = asyncHandler(async (req, res) => {
     return res.status(409).json({ message: "Paper already exists" });
   }
 
-  const PaperObj = {
-    department,
+  const subjectObj = {
+    subject,
+    universityCode,
+    nbaCode,
     semester,
-    paper,
     year,
-    students,
+    department,
     teacher,
+    students
   };
 
   // Create and Store New teacher
-  const record = await Paper.create(PaperObj);
-
+  const record = await Subject.create(subjectObj);
+ 
   if (record) {
     res.status(201).json({
-      message: `New Paper ${req.body.paper} added `,
+      message: `New Subject ${req.body.subject} added `,
     });
   } else {
     res.status(400).json({ message: "Invalid data received" });
@@ -247,12 +300,13 @@ const deletePaper = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  assignSubject,
   addPaper,
   getAllPapers,
   getPapers,
   getPapersStudent,
   getStudentsList,
-  getPaper,
+  getSubject,
   updateStudents,
   deletePaper,
 };

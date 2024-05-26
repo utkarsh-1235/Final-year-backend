@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 const teacherController = require("./../controllers/teacherController");
 
-router.route("/").post(teacherController.createNewTeacher);
+// router.route("/create").post(teacherController.createNewTeacher);
+router.post("/create", teacherController.createNewTeacher);
 router.route("/list/:department").get(teacherController.getTeacherList);
 router.route("/approve/:department").get(teacherController.getNewTeachers);
 

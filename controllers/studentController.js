@@ -1,6 +1,8 @@
 const Student = require("./../models/Student");
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcrypt");
+const mongoose = require("mongoose");
+const Subject = require("../models/Subject");
 
 // @desc Get all Student
 // @route GET /Student
@@ -22,51 +24,102 @@ const getStudent = asyncHandler(async (req, res) => {
 // @access Private
 const getAllStudents = asyncHandler(async (req, res) => {
   const students = await Student.find().select("-password").lean();
+  console.log(students);
   if (!students?.length) {
     return res.status(400).json({ message: "No Students Found" });
   }
   res.json(students);
 });
 
+// @desc Get Student by subject
+// @route GET /Student
+// @access Private
+const getStudentBySubject = asyncHandler(async (req, res) => {
+  const subjectId = req?.params?.subjectId;
+  console.log(subjectId)
+  if (!subjectId) {
+      return res.status(400).json({ message: "Please provide Subject" });
+  }
+
+  try {
+      // Find the subject by ID
+      const subject = await Subject.findById(subjectId);
+
+      if (!subject) {
+          return res.status(404).json({ message: "Subject not found" });
+      }
+
+      // Retrieve students associated with the subject
+      const students = await Student.find({ _id: { $in: subject.students } }).exec();
+        console.log(students);
+      if (!students || students.length === 0) {
+          return res.status(404).json({ message: "No Students Found Related to subject" });
+      }
+
+      return res.status(200).json({ subject, students });
+  } catch (error) {
+      console.error("Error retrieving students by subject:", error);
+      return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
 // @desc Create New Student
 // @route POST /Student
 // @access Private
-const createNewStudent = asyncHandler(async (req, res) => {
-  const { name, course, email, username, password } = req.body;
+const createNewStudent = asyncHandler(async(req, res) => {
+  const {name,
+         email,
+         universityRollno,
+         collegeId,
+         phoneNumber,
+         mothersName,
+         mothersPhone,
+         fathersName,
+         fathersPhone,
+         guardianName,
+         guardianPhone} = req.body;
+          
+         console.log(name,
+          email,
+          universityRollno,
+          collegeId,
+          phoneNumber,
+          mothersName,
+          mothersPhone,
+          fathersName,
+          fathersPhone,
+          guardianName,
+          guardianPhone)
+         if(!name || !email || !universityRollno || !collegeId || !phoneNumber || !guardianName || !guardianPhone){
+          return res.status(400).json({ message: "All fields are required" });      
+         }
 
-  // Confirm Data
-  if (!name || !email || !course || !username || !password) {
-    return res.status(400).json({ message: "All fields are required" });
-  }
+         const duplicate = await Student.findOne({universityRollno})
+         if(duplicate){
+          return res.status(400).json({ message: "Already registered" });      
+         }
 
-  // Check for Duplicates
-  const duplicate = await Student.findOne({ username }).lean().exec();
+         const studentObj = {
+          name,
+         email,
+         universityRollno,
+         collegeId,
+         phoneNumber,
+         mothersName,
+         mothersPhone,
+         fathersName,
+         fathersPhone,
+         guardianName,
+         guardianPhone
+         }
+        
+        const result = await Student.create(studentObj);
+        console.log(result);
+        await result.save();
+        return res.status(201).json({ message: `${name} created ${result}` });      
 
-  if (duplicate) {
-    return res.status(409).json({ message: "Duplicate Username" });
-  }
-
-  // Hash Password
-  const hashedPwd = await bcrypt.hash(password, 10); // salt rounds
-
-  const studentObj = {
-    name,
-    course,
-    email,
-    username,
-    password: hashedPwd,
-  };
-
-  // Create and Store New student
-  const student = await Student.create(studentObj);
-  console.log(student);
-
-  if (student) {
-    res.status(201).json({ message: `New Student ${name} created`, student });
-  } else {
-    res.status(400).json({ message: "Invalid data received" });
-  }
-});
+})
 
 // @desc Update Student
 // @route PATCH /Student
@@ -132,6 +185,7 @@ const deleteStudent = asyncHandler(async (req, res) => {
 module.exports = {
   getStudent,
   getAllStudents,
+  getStudentBySubject,
   createNewStudent,
   updateStudent,
   deleteStudent,

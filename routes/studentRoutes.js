@@ -9,6 +9,10 @@ router
   .delete(studentController.deleteStudent);
 
 router
+.route("/subject/:subjectId")  
+.get(studentController.getStudentBySubject);
+
+router
   .route("/")
   .get(studentController.getAllStudents)
   .post(studentController.createNewStudent);

@@ -8,7 +8,7 @@ router
   .get(attendanceController.getAttendanceStudent);
 
 router
-  .route("/:paper/:date/:hour")
+  .route("/:subject/:date/:hour")
   .get(attendanceController.getAttendance)
   .post(attendanceController.addAttendance)
   .patch(attendanceController.updateAttendance);

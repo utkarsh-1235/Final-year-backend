@@ -2,31 +2,35 @@ const mongoose = require("mongoose");
 
 // Internal Result of Students
 const internalSchema = new mongoose.Schema({
-  paper: {
+  subject: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Paper",
+    ref: "Subject",
   },
-  marks: [
-    {
-      _id: {
+  marks: {
+      student: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Student",
-        required: true,
+        //required: true,
       },
-      name: String,
-      test: {
-        type: Number,
-        required: true,
+      co1: {
+         type: String
       },
-      seminar: {
-        type: Number,
-        required: true,
-      },
-      assignment: {
-        type: Number,
-        required: true,
-      },
-      attendance: {
+      co2: {
+        type: String
+     },
+     co3: {
+      type: String
+     },
+   co4: {
+    type: String
+     },
+     co5: {
+      type: String
+     },
+     co6: {
+      type: String
+     },
+      attandance: {
         type: Number,
         required: true,
       },
@@ -35,7 +39,8 @@ const internalSchema = new mongoose.Schema({
         required: true,
       },
     },
-  ],
+},{
+  timestamps: true
 });
 
 module.exports = mongoose.model("Internal", internalSchema);
