@@ -76,34 +76,78 @@ const getInternalStudent = asyncHandler(async (req, res) => {
 // @route POST /Internal
 // @access Private
 const addInternal = asyncHandler(async (req, res) => {
-  const { subject, marks } = req.body;
+  const subject = req.body.paper;
+  const { marks } = req.body;
 
   // Confirm Data
-  if (!subject || !marks) {
-    return res
-      .status(400)
-      .json({ message: "Incomplete Request: Fields Missing" });
+  if (!subject || !marks || !Array.isArray(marks)) {
+    return res.status(400).json({ message: "Incomplete Request: Fields Missing or invalid marks format" });
   }
+
   // Check for Duplicates
-  const duplicate = await Internal.findOne({
-    subject,
-  })
-    .lean()
-    .exec();
+  const duplicate = await Internal.findOne({ subject }).lean().exec();
   if (duplicate) {
     return res.status(409).json({ message: "Internal record already exists" });
   }
 
-  const InternalObj = {
-    subject,
-    marks,
-  };
-  // Create and Store New teacher
-  const record = await Internal.create(InternalObj);
-  if (record) {
-    res.status(201).json({
-      message: `Internal Record  Added`,
-    });
+  // Save each student's marks
+  const savedRecords = await Promise.all(
+    marks.map(async (mark) => {
+      const internalObj = {
+        subject,
+        marks: {
+          CO1: {
+            A1a: mark.CO1?.A1a || '',
+            A1b: mark.CO1?.A1b || '',
+            A1c: mark.CO1?.A1c || '',
+            B2a: mark.CO1?.B2a || '',
+            B2b: mark.CO1?.B2b || '',
+            B2c: mark.CO1?.B2c || '',
+            C3a: mark.CO1?.C3a || '',
+            C3b: mark.CO1?.C3b || '',
+            C5a: mark.CO1?.C5a || '',
+          },
+          CO2: {
+            A1d: mark.CO2?.A1d || '',
+            A1e: mark.CO2?.A1e || '',
+            B2d: mark.CO2?.B2d || '',
+            B2e: mark.CO2?.B2e || '',
+            C4a: mark.CO2?.C4a || '',
+            C4b: mark.CO2?.C4b || '',
+            C5b: mark.CO2?.C5b || '',
+          },
+          CO3: {
+            A1a: mark.CO3?.A1a || '',
+            A1b: mark.CO3?.A1b || '',
+            A1c: mark.CO3?.A1c || '',
+            B2a: mark.CO3?.B2a || '',
+            C3a: mark.CO3?.C3a || '',
+            C3b: mark.CO3?.C3b || '',
+          },
+          CO4: {
+            A1d: mark.CO4?.A1d || '',
+            B2b: mark.CO4?.B2b || '',
+            B2c: mark.CO4?.B2c || '',
+            C4a: mark.CO4?.C4a || '',
+            C4b: mark.CO4?.C4b || '',
+          },
+          CO5: {
+            A1e: mark.CO5?.A1e || '',
+            B2d: mark.CO5?.B2d || '',
+            B2e: mark.CO5?.B2e || '',
+            C5a: mark.CO5?.C5a || '',
+            C5b: mark.CO5?.C5b || '',
+          },
+        },
+      };
+
+      const record = new Internal(internalObj);
+      return record.save();
+    })
+  );
+
+  if (savedRecords) {
+    res.status(201).json({ message: `Internal Records Added`, data: savedRecords });
   } else {
     res.status(400).json({ message: "Invalid data received" });
   }
