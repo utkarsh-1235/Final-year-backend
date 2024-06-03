@@ -27,26 +27,6 @@ const studentSchema = new mongoose.Schema({
        type: mongoose.Schema.Types.ObjectId,
        ref:  'Subject'
     }],
-    mothersName: {
-        type: String,
-    },
-    mothersPhone: {
-        type: String
-    },
-    fathersName: {
-        type: String
-    },
-    fathersPhone: {
-        type: String
-    },
-    guardianName: {
-        type: String,
-        
-    },
-    guardianPhone: {
-        type: String,
-        
-    }
 },{
     timestamps: true
 })

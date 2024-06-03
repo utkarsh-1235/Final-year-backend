@@ -8,45 +8,41 @@ const Student = require("../models/Student");
 const assignSubject = asyncHandler(async (req, res) => {
   const { studentIds, subjectId } = req.body;
 
-    // Find the subject
-    const subject = await Subject.findById(subjectId);
-    if (!subject) {
-      return res.status(404).json({ error: 'Subject not found' });
-    }
+  // Find the subject
+  const subject = await Subject.findById(subjectId);
+  if (!subject) {
+    return res.status(404).json({ error: 'Subject not found' });
+  }
 
-    // Update each student
-    await Promise.all(studentIds.map(async (studentId) => {
-      const student = await Student.findById(studentId);
-      if (!student) {
-        return res.status(404).json({ error: `Student with id ${studentId} not found` });
-      }
+  // Check if any student is already assigned to the subject
+  const students = await Student.find({ _id: { $in: studentIds } });
+  const alreadyAssignedStudents = students.filter(student => student.subjects.includes(subjectId));
 
-      // Add subject to student's subjects list if not already present
-      if (!student.subjects.includes(subjectId)) {
-        student.subjects.push(subjectId);
-      }
-    }));
+  if (alreadyAssignedStudents.length > 0) {
+    const alreadyAssignedStudentIds = alreadyAssignedStudents.map(student => student._id);
+    return res.status(400).json({ error: `Students with ids ${alreadyAssignedStudentIds.join(', ')} are already assigned to the subject` });
+  }
 
-    // Save all modified students
-    await Promise.all(studentIds.map(async (studentId) => {
-      const student = await Student.findById(studentId);
+  // Update each student
+  await Promise.all(students.map(async (student) => {
+    if (!student.subjects.includes(subjectId)) {
+      student.subjects.push(subjectId);
       await student.save();
-    }));
+    }
+  }));
 
-    // Add students to subject's students list if not already present
-    studentIds.forEach(studentId => {
-      if (!subject.students.includes(studentId)) {
-        subject.students.push(studentId);
-      }
-    });
+  // Add students to subject's students list if not already present
+  studentIds.forEach(studentId => {
+    if (!subject.students.includes(studentId)) {
+      subject.students.push(studentId);
+    }
+  });
 
-    // Save the modified subject
-    await subject.save();
+  // Save the modified subject
+  await subject.save();
 
-    return res.status(200).json({ message: 'Subjects assigned successfully' });
-  
+  return res.status(200).json({ message: 'Subjects assigned successfully' });
 });
-
 
 // @desc Get Papers for each Teacher
 // @route GET /Paper/teacher/teacherId

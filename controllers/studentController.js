@@ -72,26 +72,14 @@ const createNewStudent = asyncHandler(async(req, res) => {
          email,
          universityRollno,
          collegeId,
-         phoneNumber,
-         mothersName,
-         mothersPhone,
-         fathersName,
-         fathersPhone,
-         guardianName,
-         guardianPhone} = req.body;
+         phoneNumber} = req.body;
           
          console.log(name,
           email,
           universityRollno,
           collegeId,
-          phoneNumber,
-          mothersName,
-          mothersPhone,
-          fathersName,
-          fathersPhone,
-          guardianName,
-          guardianPhone)
-         if(!name || !email || !universityRollno || !collegeId || !phoneNumber || !guardianName || !guardianPhone){
+          phoneNumber)
+         if(!name || !email || !universityRollno || !collegeId || !phoneNumber){
           return res.status(400).json({ message: "All fields are required" });      
          }
 
@@ -105,13 +93,7 @@ const createNewStudent = asyncHandler(async(req, res) => {
          email,
          universityRollno,
          collegeId,
-         phoneNumber,
-         mothersName,
-         mothersPhone,
-         fathersName,
-         fathersPhone,
-         guardianName,
-         guardianPhone
+         phoneNumber
          }
         
         const result = await Student.create(studentObj);

@@ -11,14 +11,15 @@ const getInternal = asyncHandler(async (req, res) => {
       .status(400)
       .json({ message: "Incomplete Request: Params Missing" });
   }
-  const internal = await Internal.findOne({
-    paper: req.params.paper,
+  const internal = await Internal.find({
+    subject: req.params.paper,
   }).exec();
   if (!internal) {
     return res.status(404).json({
       message: "No Existing Record(s) found. Add New Record.",
     });
   }
+  console.log(internal)
   res.json(internal);
 });
 
@@ -77,7 +78,7 @@ const getInternalStudent = asyncHandler(async (req, res) => {
 // @access Private
 const addInternal = asyncHandler(async (req, res) => {
   const subject = req.body.paper;
-  const { marks } = req.body;
+  const { marks, student } = req.body;
 
   // Confirm Data
   if (!subject || !marks || !Array.isArray(marks)) {
@@ -95,7 +96,9 @@ const addInternal = asyncHandler(async (req, res) => {
     marks.map(async (mark) => {
       const internalObj = {
         subject,
+        student,
         marks: {
+          universityRollno: mark.universityRollno,
           CO1: {
             A1a: mark.CO1?.A1a || '',
             A1b: mark.CO1?.A1b || '',
@@ -157,42 +160,85 @@ const addInternal = asyncHandler(async (req, res) => {
 // @route PATCH /Internal
 // @access Private
 const updateInternal = asyncHandler(async (req, res) => {
+  // Log the entire request body to diagnose the issue
+  console.log('Request Body:', req.body);
+
   const { id, paper, marks } = req.body;
 
   // Confirm Data
-  if (!id || !paper || !marks) {
-    return res.status(400).json({ message: "All fields are required" });
+  if (!id || !paper || !marks || !Array.isArray(marks)) {
+    return res.status(400).json({ message: "All fields are required and marks should be an array" });
   }
 
   // Find Record
   const record = await Internal.findById(id).exec();
+  console.log(`Record found for ID ${id}:`, record);
   if (!record) {
     return res.status(404).json({ message: "Internal record doesn't exist" });
   }
 
-  // Check for duplicate
-  const duplicate = await Internal.findOne({
-    paper: req.params.paper,
-  })
-    .lean()
-    .exec();
-
-  // Allow Updates to original
-  if (duplicate && duplicate?._id.toString() !== id) {
-    return res.status(409).json({ message: "Duplicate Username" });
+  // Check for duplicate by subject
+  const duplicate = await Internal.findOne({ subject: paper }).lean().exec();
+  if (duplicate && duplicate._id.toString() !== id) {
+    return res.status(409).json({ message: "Duplicate record for the same subject" });
   }
-  record.paper = paper;
-  record.marks = marks;
+
+  // Update the marks for each student
+  const updatedMarks = marks.map(mark => ({
+    CO1: {
+      A1a: mark.CO1?.A1a || '',
+      A1b: mark.CO1?.A1b || '',
+      A1c: mark.CO1?.A1c || '',
+      B2a: mark.CO1?.B2a || '',
+      B2b: mark.CO1?.B2b || '',
+      B2c: mark.CO1?.B2c || '',
+      C3a: mark.CO1?.C3a || '',
+      C3b: mark.CO1?.C3b || '',
+      C5a: mark.CO1?.C5a || '',
+    },
+    CO2: {
+      A1d: mark.CO2?.A1d || '',
+      A1e: mark.CO2?.A1e || '',
+      B2d: mark.CO2?.B2d || '',
+      B2e: mark.CO2?.B2e || '',
+      C4a: mark.CO2?.C4a || '',
+      C4b: mark.CO2?.C4b || '',
+      C5b: mark.CO2?.C5b || '',
+    },
+    CO3: {
+      A1a: mark.CO3?.A1a || '',
+      A1b: mark.CO3?.A1b || '',
+      A1c: mark.CO3?.A1c || '',
+      B2a: mark.CO3?.B2a || '',
+      C3a: mark.CO3?.C3a || '',
+      C3b: mark.CO3?.C3b || '',
+    },
+    CO4: {
+      A1d: mark.CO4?.A1d || '',
+      B2b: mark.CO4?.B2b || '',
+      B2c: mark.CO4?.B2c || '',
+      C4a: mark.CO4?.C4a || '',
+      C4b: mark.CO4?.C4b || '',
+    },
+    CO5: {
+      A1e: mark.CO5?.A1e || '',
+      B2d: mark.CO5?.B2d || '',
+      B2e: mark.CO5?.B2e || '',
+      C5a: mark.CO5?.C5a || '',
+      C5b: mark.CO5?.C5b || '',
+    },
+  }));
+
+  record.subject = paper;
+  record.marks = updatedMarks;
+
   const save = await record.save();
   if (save) {
-    res.json({
-      message: ` Internal Record Updated`,
-    });
+    res.json({ message: "Internal Record Updated" });
   } else {
-    res.json({ message: "Save Failed" });
+    res.status(500).json({ message: "Save Failed" });
   }
 });
-
 // @desc Delete Teacher
 // @route DELETE /Teacher
 // @access Private

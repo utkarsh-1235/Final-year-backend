@@ -12,7 +12,7 @@ const internalSchema = new mongoose.Schema({
     //required: true,
   },
   marks: {
-      
+    universityRollno: { type: String },
       CO1:{
         A1a: {
            type: String
